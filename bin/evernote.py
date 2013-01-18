@@ -59,9 +59,7 @@ def MakeEvernoteNote(clip):
     	end if
     end tell 
 END'''
-    print cmd
-    print
-    # os.system(cmd)
+    os.system(cmd)
 
 
 
