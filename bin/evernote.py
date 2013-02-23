@@ -16,6 +16,7 @@ import os
 import time
 import sys
 import getopt
+import re
 from os.path import join, dirname, exists, realpath
 
 # The library in ../lib/ has some classes and helpers
@@ -32,7 +33,7 @@ else:
 
 
 help_message = '''
-evernote.py - Parse kindle clippings into evernote (Mac)
+evernote.py - Parse and sync kindle clippings into evernote (Mac)
 
 Usage: 
     evernote.py [file]
@@ -45,6 +46,23 @@ Options:
 class Usage(Exception):
     def __init__(self, msg):
         self.msg = msg
+
+def ParseKindleDate(date_string):
+    # OMG THIS CODE WILL STOP WORKING IN 2100! I hope Amazon will fix their dates before that!
+    date_string = re.sub(r", (\d) ", r", 0\1 ", date_string) # if day is 8 instead of 08
+    date_string = re.sub(r" (\d\d) (\d\d:)", r" 20\1 \2", date_string) # if year is 13 instead of 2013 
+    return time.strptime(date_string.strip(), '%A, %d %B %Y %H:%M:%S') # Saturday, 23 February 2013 17:56:26
+
+def DateLastSync():
+    cmd = '''osascript<<END 
+    tell application "Evernote"
+	set theNotes to every note in notebook "Kindle"
+	set theLastNote to beginning of theNotes
+	set theDate to creation date of theLastNote
+	do shell script "echo " & quote & theDate & quote
+end tell
+END'''
+    return ParseKindleDate(os.popen(cmd).read())    
 
 
 def MakeEvernoteNote(clip):
@@ -60,6 +78,9 @@ def MakeEvernoteNote(clip):
     end tell 
 END'''
     os.system(cmd)
+    time.sleep(2) # need to wait a fair amount 
+                  # or Evernote will not "find" the existing notes and just create duplicates
+                  # bug reported to Evernote, not sure when/whether they will bother
 
 
 
@@ -86,12 +107,12 @@ def main(argv=None):
     else:
         clippings_file = None
 
+    last_sync_date = DateLastSync()
     clippings = clipping.loadcatalog(clippings_file)
-    for clip in clippings:        
-        MakeEvernoteNote(clip)
-        time.sleep(3) # need to wait a fair amount 
-                      # or Evernote will not "find" the existing notes and just create duplicates
-                      # TODO - report bug to Evernote
+    for clip in clippings:
+        clipdate = ParseKindleDate(clip.date)
+        if  clipdate > last_sync_date:
+            MakeEvernoteNote(clip)
 
 if __name__ == "__main__":
     sys.exit(main())
