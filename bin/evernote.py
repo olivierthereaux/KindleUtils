@@ -78,10 +78,7 @@ def MakeEvernoteNote(clip):
     end tell 
 END'''
     os.system(cmd)
-    time.sleep(2) # need to wait a fair amount 
-                  # or Evernote will not "find" the existing notes and just create duplicates
-                  # bug reported to Evernote, not sure when/whether they will bother
-
+    time.sleep(1) # Be gentle 
 
 
 def main(argv=None):
@@ -90,7 +87,7 @@ def main(argv=None):
     try:
         try:
             opts, args = getopt.getopt(argv[1:], "h", ["help"])
-        except getopt.error, msg:
+        except getopt.error as msg:
             raise Usage(msg)
     
         # option processing
@@ -98,9 +95,9 @@ def main(argv=None):
             if option in ("-h", "--help"):
                 raise Usage(help_message)
     
-    except Usage, err:
-        print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
-        print >> sys.stderr, "\t for help use --help"
+    except Usage as err:
+        print(sys.argv[0].split("/")[-1] + ": " + str(err.msg), file=sys.stderr)
+        print("\t for help use --help", file=sys.stderr)
         return 2
     if len(args) > 0:
         clippings_file = args[0]
@@ -111,8 +108,13 @@ def main(argv=None):
     clippings = clipping.loadcatalog(clippings_file)
     for clip in clippings:
         clipdate = ParseKindleDate(clip.date)
+        # print clip.title.encode("utf-8"), clip.date.encode("utf-8"), last_sync_date
         if  clipdate > last_sync_date:
+            # print "yes"
             MakeEvernoteNote(clip)
+        else:
+            # print "no"
+            pass
 
 if __name__ == "__main__":
     sys.exit(main())
